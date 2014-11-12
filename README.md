@@ -4,21 +4,17 @@ An auto documentation for Rails. Pop it into your test suite and watch it amaze.
 
 Time for this project was provided by my employer, [SmashingBoxes](http://smashingboxes.com/). What a great place to work.
 
-# Limitations
-
- * **Probably not thread safe**. Thread safety isn't a focus for this project right now. Pull requests welcome :-).
-
 
 ## Setup
 
 In your gemfile:
-`gem 'doc_yo_self', group: :test`
+`gem 'doc_yo_self', github: 'elfassy/doc_yo_self', group: :test`
 
 In  `test_helper.rb`:
 ```ruby
 DocYoSelf.config do |c|
   c.template_file = 'test/template.md.erb'
-  c.output_file   = 'api_docs.md'
+  c.output_folder   = 'wiki'
 end
 ```
 
@@ -28,63 +24,74 @@ To run doc generation after every controller spec, put this into your `teardown`
 
 ## For Minitest Folks
 
-```ruby
-class ActionController::TestCase < ActiveSupport::TestCase
-  def teardown
-    DocYoSelf.run!(request, response)
-  end
-end
-```
 
-Then put this at the bottom of your `test_helper.rb`:
+At the bottom of your `test_helper.rb`:
 
 ```ruby
-MiniTest::Unit.after_tests { DocYoSelf.finish! }
+Minitest.after_run { DocYoSelf.finish! }
 ```
 
-Or put it individually into only certain tests...
+Then
 
 ```ruby
 def test_some_api
   get :index, :users
   assert response.status == 200
-  DocYoSelf.run!(request, response)
+  DocYoSelf.run!(self)
 end
 ```
-
-## For RSpec Folks
-
-Put this in your `spec_helper` and smoke it.
+or have it run for all tests (recommended! You can skip! the ones you don't need)
 
 ```ruby
-RSpec.configure do |config|
-  config.after(:each, type: :controller) do
-    DocYoSelf.run!(request, response)
+  def setup
+    @doc_yo_self = DocYoSelf.new
   end
 
-  config.after(:suite) { DocYoSelf.finish! }
-end
+  def teardown
+    @doc_yo_self.run!(self)
+  end
 ```
 
 
-## Usage
 
-It will log all requests and responses by default, but you can add some **optional** parameters as well.
+## Options
 
-### Skipping documentation
+Options can be passed as a hash to the `run!` function or directly to the instance methods:
 
+### Adding notes
+Defaults to the test name. Useful if you'd like to customize the text in your the output docs.
 ```ruby
-def test_stuff
-  DocYoSelf.skip
-  # Blahhh
+def test_some_api
+  # ...
+  @doc_yo_self.note =  "This is fun"
+  # or DocYoSelf.run!(self, note: "This is fun")
 end
 ```
 
-## Adding notes
-
+### Output file
+Defaults to the test class name. This is the name of the file in which *this* test will be added.
 ```ruby
-def test_stuff
-  DocYoSelf.note "안녕하세요. This is a note."
-  # Blahhh
+def test_some_api
+  # ...
+  @doc_yo_self.file = "fun.md"
+end
+```
+
+### Response and Request
+Defaults to `response` and `request` . 
+```ruby
+def test_some_api
+  # ...
+  @doc_yo_self.response = response
+end
+```
+
+### skip!
+You can easily skip a test with
+```ruby
+def test_some_api
+  @doc_yo_self.skip!
+  get :index, :users
+  assert response.status == 200
 end
 ```
